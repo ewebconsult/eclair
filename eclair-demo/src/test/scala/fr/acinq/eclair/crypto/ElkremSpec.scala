@@ -22,7 +22,7 @@ class ElkremSpec extends FunSuite {
   test("receiver can compute hashes") {
     val root: BinaryData = "this is the root".getBytes("UTF-8")
     val sender = Sender.init(root)
-    val receiver = Receiver.init
+    val receiver = Receiver.init(15)
 
     val receiver1 = Receiver.addHash(receiver, Sender.getHash(sender, 14), 14)
     assert(receiver1.nodes(14) == Sender.getHash(sender, 14))
@@ -40,8 +40,9 @@ class ElkremSpec extends FunSuite {
     assert(Receiver.getHash(receiver4, 10) == Some(Sender.getHash(sender, 10)))
     val receiver5 = Receiver.addHash(receiver4, Sender.getHash(sender, 1), 1)
     assert(Receiver.getHash(receiver5, 1) == Some(Sender.getHash(sender, 1)))
-    assert(Receiver.getHash(receiver5, 10).isEmpty)
-    assert(Receiver.getHash(receiver5, 4).isEmpty)
+    assert(receiver5.nodes.get(10).isEmpty)
+    assert(Receiver.getHash(receiver5, 4) == Some(Sender.getHash(sender, 4)))
+    assert(Receiver.getHash(receiver5, 9) == Some(Sender.getHash(sender, 9)))
     assert(Receiver.getHash(receiver5, 10) == Some(Sender.getHash(sender, 10)))
   }
 }
