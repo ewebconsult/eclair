@@ -4,6 +4,15 @@ import fr.acinq.bitcoin.{Crypto, BinaryData}
 
 /**
   * see https://github.com/LightningNetwork/lnd/blob/master/elkrem/elkrem.go
+  * Node numbering (positions) use the standard convention for binary trees:
+  *               0
+  *             /  \
+  *            1    2
+  *           / \  / \
+  *          3  4 5   6
+  *
+  *  Moves down the tree are represented with boolean value: false means left, true means right
+  *  For example, node 4 is at (false, true), node 2 is at (right)
   */
 object Elkrem {
 
@@ -16,9 +25,13 @@ object Elkrem {
     *               false means left, true means right.
     */
   case class Sender(root: BinaryData, height: Int, moves: Vector[Boolean]) {
-    val numberOfHashes = (1 << height) - 1
+    /**
+      *
+      * @return the current hash
+      */
+    def hash: BinaryData = Sender.hash(root, moves)
 
-    def hash = Sender.hash(root, moves)
+    def hash(pos: Int) : BinaryData = Sender.hash(root, pos)
 
     def hasNext = !moves.isEmpty
   }
@@ -84,6 +97,13 @@ object Elkrem {
     }
   }
 
+  /**
+    *
+    * @param moves current position in the tree
+    * @param height tree height
+    * @return the position of the next node in the tree ("next" as in the next node that the sender should send and
+    *         that the receiver is expected to receive)
+    */
   def nextMoves(moves: Vector[Boolean], height: Int): Vector[Boolean] = {
     if (moves.isEmpty) moves
     else moves.last match {

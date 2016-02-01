@@ -10,17 +10,18 @@ import org.scalatest.junit.JUnitRunner
   */
 @RunWith(classOf[JUnitRunner])
 class ElkremSpec extends FunSuite {
+
   import Elkrem._
 
   test("sender can compute hashes") {
     val root = BinaryData("5a5f20f2b8501b9bc922e0763968fca05f276c298c101eaa7cb6c88ba02e0b3b").reverse
     val sender = Sender.init(root, 4)
 
-    def hashes(sender: Sender, max: Int, acc: Seq[BinaryData] = Seq.empty[BinaryData]) : Seq[BinaryData] = {
+    def hashes(sender: Sender, max: Int, acc: Seq[BinaryData] = Seq.empty[BinaryData]): Seq[BinaryData] = {
       if (acc.size == max) acc else hashes(Sender.next(sender), max, acc :+ sender.hash)
     }
 
-    val results = hashes(sender,15)
+    val results = hashes(sender, 15)
     val expected: Seq[BinaryData] = Seq(
       "337d823876c6db822bbe63492aef42f8aeafd963ebd8b2e4dd26f787ad70fb66",
       "1a4ea5614e7b59f5c9781f99e7654d89fefd5aac3c10f76405252cb911ca1bec",
@@ -41,6 +42,7 @@ class ElkremSpec extends FunSuite {
     val expected1 = expected.map(_.reverse).map(BinaryData(_))
     assert(results === expected1)
   }
+
   test("receiver can compute hashes") {
     val root = BinaryData("5a5f20f2b8501b9bc922e0763968fca05f276c298c101eaa7cb6c88ba02e0b3b").reverse
     val sender = Sender.init(root, 4)
@@ -64,5 +66,22 @@ class ElkremSpec extends FunSuite {
     assert(receiver3.getHash(3) === Some(Sender.hash(sender3.root, 3)))
     assert(receiver3.getHash(7) === Some(Sender.hash(sender3.root, 7)))
     assert(receiver3.getHash(8) === Some(Sender.hash(sender3.root, 8)))
+  }
+
+  test("receiver does not store too many hashes") {
+    val root = BinaryData("5a5f20f2b8501b9bc922e0763968fca05f276c298c101eaa7cb6c88ba02e0b3b").reverse
+    val height = 8
+    val sender = Sender.init(root, height)
+    val receiver = Receiver.init(height)
+
+    def loop(sender: Sender, receiver: Receiver, sizes: Seq[Int] = Seq.empty[Int]): (Receiver, Seq[Int]) = {
+      if (!sender.hasNext) (receiver, sizes)
+      else loop(Sender.next(sender), Receiver.addHash(receiver, sender.hash), receiver.nodes.size +: sizes)
+    }
+    val (receiver1, sizes) = loop(sender, receiver)
+    assert(sizes.max <= height)
+    for (i <- 1 until 1 << height - 1) {
+      assert(receiver1.getHash(i) === Some(Sender.hash(sender.root, i)))
+    }
   }
 }
